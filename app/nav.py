@@ -233,7 +233,15 @@ if selected == "Dashboard":
     # Display the plot using Streamlit
     st.pyplot(plt)
 
-
+    # Pie chart
+    funds_counts = df['Scheme Name'].value_counts()
+    explode = (0.05, 0.05, 0.05, 0.05, 0.05, 0.05)
+    fig1, ax1 = plt.subplots(figsize=(4, 4))
+    ax1.pie(funds_counts, explode=explode, labels=funds_counts.index, autopct='%1.1f%%', startangle=60,
+            wedgeprops={"edgecolor": "black", 'linewidth': 2, 'antialiased': True}, textprops={'fontsize': 6})
+    ax1.set_title('Distribution of Net Asset Values by Scheme Name', fontsize=6)
+    st.pyplot(fig1)
+    
     # Sidebar additions
     st.sidebar.write("Choose a visualization:")
 
