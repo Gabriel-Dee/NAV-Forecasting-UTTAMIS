@@ -1,10 +1,25 @@
 import streamlit as st
 import pandas as pd
 from streamlit_option_menu import option_menu
-import pathlib
-import json
+import pandas_datareader.data as web
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import datetime
 from PIL import Image
+import requests
+import json
 from streamlit_lottie import st_lottie
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Lasso, Ridge
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.ensemble import VotingRegressor
+from matplotlib.ticker import ScalarFormatter 
+import statsmodels.api as sm
+import pathlib
+import joblib
+# import preprocessing
 
 # Get the parent directory of the current script's file
 BASE_DIR = pathlib.Path(__file__).resolve().parent
@@ -12,7 +27,7 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent
 selected = option_menu(
     menu_title=None,
     options=['Home', 'Dashboard', 'Prediction', 'NAV Prediction'],
-    icons=['house', '', '', ''],
+    icons=['house', 'laptop', 'eye', 'eye'],
     menu_icon='cast',
     default_index=0,
     orientation='horizontal',
@@ -116,11 +131,12 @@ if selected == "Home":
         st.write('3. Get highly accurate forecasts for your investments.')
             
             
+            
 if selected == "Dashboard":
 
     @st.cache_data
     def load_data():
-        df = pd.read_csv('Data/nat2.csv')
+        df = pd.read_csv('Data/net_asset_value.csv')
         import re
 
         # Clean and extract numbers
@@ -172,7 +188,7 @@ if selected == "Dashboard":
 
     # Display the statistical summary of the dataframe
         st.write("### Statistical Summary")
-        st.write(df.describe(include='all').T)
+        st.write(df.describe().T)
 
     # Display the date
     st.write("Date: Tuesday, 19th of September 2023")
@@ -204,6 +220,19 @@ if selected == "Dashboard":
         with columns_second_row[idx]:
             st.info(fund["name"])
             st.metric(label='TZS', value=fund["value"])
+
+    # Create a color palette with unique colors for each scheme name
+    unique_colors = sns.color_palette('Set3', n_colors=len(df['Scheme Name'].unique()))
+
+    # Create the countplot with the specified color palette
+    plt.figure(figsize=(12, 6))
+    sns.countplot(data=df, x='Scheme Name', palette=unique_colors)
+    plt.xticks(rotation=45, ha='right')
+    plt.title('Distribution of Net Asset Values by Scheme Name')
+
+    # Display the plot using Streamlit
+    st.pyplot(plt)
+
 
     # Sidebar additions
     st.sidebar.write("Choose a visualization:")
@@ -297,51 +326,98 @@ if selected == "Dashboard":
     fig.tight_layout()
     st.pyplot(fig)
     st.write("\n")
-    st.write("""
-    Overlaying the outstanding number of units with the NAV values provides a holistic view. While the NAV values give insights into the scheme's performance, the number of units can indicate the scheme's popularity or trustworthiness among investors.
-    """)
 
-    # Bar Plot of Average NAV Values for Top N Schemes
-    st.write("## Average NAV Values for Top 10 Schemes")
-    top_n = 10
-    avg_nav = df.groupby('Scheme Name')['Net Asset Value'].mean(
-    ).sort_values(ascending=False).head(top_n)
-    plt.figure(figsize=(14, 7))
-    avg_nav.plot(kind='bar', color='skyblue')
-    plt.title(f"Average NAV Values for Top {top_n} Schemes")
-    plt.ylabel("Average NAV Value")
-    plt.xlabel("Scheme Name")
+    # Group data by 'Scheme Name' and calculate the average outstanding units
+    average_units = df.groupby('Scheme Name')['Outstanding Number of Units'].mean()
+    # Define a color palette for each scheme
+    colors = sns.color_palette("husl", len(df['Scheme Name'].unique()))
+
+    st.title('Average Outstanding Number of Units by Scheme Name')
+
+    # Create a bar plot using Matplotlib
+    plt.figure(figsize=(10, 6))
+    average_units.plot(kind='bar', color=colors)
+    plt.title('Average Outstanding Number of Units by Scheme Name')
+    plt.xlabel('Scheme Name')
+    plt.ylabel('Average Outstanding Number of Units')
+    plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+    # Modify the Y-axis formatting to display real numbers
+    plt.gca().yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+
+
+    # Display the plot in the Streamlit app
+    st.pyplot(plt)
+
+    # Define a color palette for each scheme
+    colors = sns.color_palette("husl", len(df['Scheme Name'].unique()))
+
+    # Group data by 'Scheme Name' and calculate the average Net Asset Value
+    average_nav = df.groupby('Scheme Name')['Net Asset Value'].mean()
+
+    # Create a Streamlit web app
+    st.title('Average Net Asset Value by Scheme Name')
+
+    # Create a bar plot using Matplotlib with different colors
+    plt.figure(figsize=(10, 6))
+    average_nav.plot(kind='bar', color=colors)
+    plt.title('Average Net Asset Value by Scheme Name')
+    plt.xlabel('Scheme Name')
+    plt.ylabel('Average Net Asset Value')
+    plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+
+    # Modify the Y-axis formatting to display real numbers
+    plt.gca().yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+
+    # Display the plot in the Streamlit app
+    st.pyplot(plt)
+
+    # Create a Streamlit web app
+    # Group data by 'Year' and 'Scheme Name' and calculate the average Net Asset Value
+    scheme_avg_nav = df.groupby(['Year', 'Scheme Name'])['Net Asset Value'].mean().reset_index()
+    st.title('Average Net Asset Value of Schemes Over the Years')
+
+    # Create a bar plot using Seaborn
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=scheme_avg_nav, x='Year', y='Net Asset Value', hue='Scheme Name')
+    plt.xlabel('Year')
+    plt.ylabel('Average Net Asset Value')
+    plt.title('Average Net Asset Value of Schemes Over the Years')
     plt.xticks(rotation=45)
-    st.pyplot(plt)
-    st.write("\n")
-    st.write("""
-    Highlighting the top schemes based on their average NAV values can guide investors towards the best-performing schemes. However, past performance is not indicative of future results, so a deeper analysis and consultation with financial experts is recommended.
-    """)
+    plt.legend(title='Scheme Name', loc='upper left', bbox_to_anchor=(1, 1))
+    plt.tight_layout()
 
-    # Facet Grid
-    st.write(
-        "### Relationship between NAV and Outstanding Number of Units - Faceted by Scheme")
-    facet = sns.FacetGrid(df, col="Scheme Name", col_wrap=3,
-                          height=3, sharex=False, sharey=False)
-    facet.map(sns.scatterplot, "Net Asset Value",
-              "Outstanding Number of Units", alpha=0.4)
-    facet.add_legend()
+    # Display the plot in the Streamlit app
     st.pyplot(plt)
 
-    # Pair Plot
-    st.write("### Pair Plot")
-    sns.pairplot(data=df[[
-                 'Net Asset Value', 'Outstanding Number of Units', 'Nav Per Unit']], diag_kind="kde")
-    st.pyplot(plt)
-    st.write("---")
 
-    # Correlation Heatmap
-    st.write("### Correlation Heatmap")
-    correlation_matrix = df[['Net Asset Value',
-                             'Outstanding Number of Units', 'Nav Per Unit']].corr()
-    sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm")
+    # Create a Streamlit web app
+    # Group data by 'Month' and 'Scheme Name' and calculate the average Net Asset Value
+    scheme_avg_nav = df.groupby(['Month', 'Scheme Name'])['Net Asset Value'].mean().reset_index()
+
+    # Define a list of month names for labeling
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    st.title('Average Net Asset Value of Schemes by Month')
+
+    # Create a bar plot using Seaborn
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=scheme_avg_nav, x='Month', y='Net Asset Value', hue='Scheme Name')
+    plt.xlabel('Month')
+    plt.ylabel('Average Net Asset Value')
+    plt.title('Average Net Asset Value of Schemes by Month')
+    plt.xticks(ticks=range(12), labels=month_names, rotation=45)
+    plt.legend(title='Scheme Name', loc='upper left', bbox_to_anchor=(1, 1))
+    plt.tight_layout()
+
+    # Display the plot in the Streamlit app
     st.pyplot(plt)
-    st.write("---")
+    
+    image = Image.open('Assets/time.png')
+    image_with_opacity = image.copy()
+    image_with_opacity.putalpha(255)  # Set the alpha value (0-255), where 0 is fully transparent and 255 is fully opaque
+
+    # Display the image with adjusted opacity
+    st.image(image_with_opacity, caption='Time series decomposition!', width=700)
+
 
 if selected == "Prediction":
     st.sidebar.image('Assets/uttamislogof.png',caption='Your Obvious Investment Partner')
@@ -396,6 +472,11 @@ if selected == "Prediction":
             ensemble_model_bond = VotingRegressor(models_bond)
             ensemble_model_bond.fit(X_train_bond, y_train_bond)
             ensemble_predictions_bond = ensemble_model_bond.predict(X_test_bond)
+            
+#             # Save the trained model to a file
+#             model_filename = "bond_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_bond, model_file)
 
             mae_bond = mean_absolute_error(y_test_bond, ensemble_predictions_bond)
             mse_bond = mean_squared_error(y_test_bond, ensemble_predictions_bond)
@@ -480,6 +561,11 @@ if selected == "Prediction":
             ensemble_model_jikimu = VotingRegressor(models_jikimu)
             ensemble_model_jikimu.fit(X_train_jikimu, y_train_jikimu)
             ensemble_predictions_jikimu = ensemble_model_jikimu.predict(X_test_jikimu)
+            
+#             # Save the trained model to a file
+#             model_filename = "jikimu_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_jikimu, model_file)
 
             mae_jikimu = mean_absolute_error(y_test_jikimu, ensemble_predictions_jikimu)
             mse_jikimu = mean_squared_error(y_test_jikimu, ensemble_predictions_jikimu)
@@ -563,6 +649,11 @@ if selected == "Prediction":
             ensemble_model_watoto = VotingRegressor(models_watoto)
             ensemble_model_watoto.fit(X_train_watoto, y_train_watoto)
             ensemble_predictions_watoto = ensemble_model_watoto.predict(X_test_watoto)
+            
+#             # Save the trained model to a file
+#             model_filename = "watoto_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_watoto, model_file)
 
             mae_watoto = mean_absolute_error(y_test_watoto, ensemble_predictions_watoto)
             mse_watoto = mean_squared_error(y_test_watoto, ensemble_predictions_watoto)
@@ -646,6 +737,11 @@ if selected == "Prediction":
             ensemble_model_liquid = VotingRegressor(models_liquid)
             ensemble_model_liquid.fit(X_train_liquid, y_train_liquid)
             ensemble_predictions_liquid = ensemble_model_liquid.predict(X_test_liquid)
+            
+#             # Save the trained model to a file
+#             model_filename = "liquid_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_liquid, model_file)
 
             mae_liquid = mean_absolute_error(y_test_liquid, ensemble_predictions_liquid)
             mse_liquid = mean_squared_error(y_test_liquid, ensemble_predictions_liquid)
@@ -729,6 +825,11 @@ if selected == "Prediction":
             ensemble_model_umoja = VotingRegressor(models_umoja)
             ensemble_model_umoja.fit(X_train_umoja, y_train_umoja)
             ensemble_predictions_umoja = ensemble_model_umoja.predict(X_test_umoja)
+            
+#             # Save the trained model to a file
+#             model_filename = "umoja_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_umoja, model_file)
 
             mae_umoja = mean_absolute_error(y_test_umoja, ensemble_predictions_umoja)
             mse_umoja = mean_squared_error(y_test_umoja, ensemble_predictions_umoja)
@@ -812,6 +913,11 @@ if selected == "Prediction":
             ensemble_model_wekeza_maisha = VotingRegressor(models_wekeza_maisha)
             ensemble_model_wekeza_maisha.fit(X_train_wekeza_maisha, y_train_wekeza_maisha)
             ensemble_predictions_wekeza_maisha = ensemble_model_wekeza_maisha.predict(X_test_wekeza_maisha)
+            
+#             # Save the trained model to a file
+#             model_filename = "wekeza_maisha_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_wekeza_maisha, model_file)
 
             mae_wekeza_maisha = mean_absolute_error(y_test_wekeza_maisha, ensemble_predictions_wekeza_maisha)
             mse_wekeza_maisha = mean_squared_error(y_test_wekeza_maisha, ensemble_predictions_wekeza_maisha)
@@ -936,6 +1042,11 @@ if selected == "NAV Prediction":
             ensemble_model_bond = VotingRegressor(models_bond)
             ensemble_model_bond.fit(X_train_bond, y_train_bond)
             ensemble_predictions_bond = ensemble_model_bond.predict(X_test_bond)
+            
+#             # Save the trained model to a file
+#             model_filename = "nav_bond_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_bond, model_file)
 
             mae_bond = mean_absolute_error(y_test_bond, ensemble_predictions_bond)
             mse_bond = mean_squared_error(y_test_bond, ensemble_predictions_bond)
@@ -1019,6 +1130,11 @@ if selected == "NAV Prediction":
             ensemble_model_jikimu = VotingRegressor(models_jikimu)
             ensemble_model_jikimu.fit(X_train_jikimu, y_train_jikimu)
             ensemble_predictions_jikimu = ensemble_model_jikimu.predict(X_test_jikimu)
+            
+#             # Save the trained model to a file
+#             model_filename = "nav_jikimu_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_jikimu, model_file)
 
             mae_jikimu = mean_absolute_error(y_test_jikimu, ensemble_predictions_jikimu)
             mse_jikimu = mean_squared_error(y_test_jikimu, ensemble_predictions_jikimu)
@@ -1100,6 +1216,11 @@ if selected == "NAV Prediction":
             ensemble_model_watoto = VotingRegressor(models_watoto)
             ensemble_model_watoto.fit(X_train_watoto, y_train_watoto)
             ensemble_predictions_watoto = ensemble_model_watoto.predict(X_test_watoto)
+            
+#             # Save the trained model to a file
+#             model_filename = "nav_watoto_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_watoto, model_file)
 
             mae_watoto = mean_absolute_error(y_test_watoto, ensemble_predictions_watoto)
             mse_watoto = mean_squared_error(y_test_watoto, ensemble_predictions_watoto)
@@ -1183,6 +1304,11 @@ if selected == "NAV Prediction":
             ensemble_model_liquid = VotingRegressor(models_liquid)
             ensemble_model_liquid.fit(X_train_liquid, y_train_liquid)
             ensemble_predictions_liquid = ensemble_model_liquid.predict(X_test_liquid)
+            
+#             # Save the trained model to a file
+#             model_filename = "nav_liquid_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_liquid, model_file)
 
             mae_liquid = mean_absolute_error(y_test_liquid, ensemble_predictions_liquid)
             mse_liquid = mean_squared_error(y_test_liquid, ensemble_predictions_liquid)
@@ -1262,6 +1388,11 @@ if selected == "NAV Prediction":
             ensemble_model_umoja = VotingRegressor(models_umoja)
             ensemble_model_umoja.fit(X_train_umoja, y_train_umoja)
             ensemble_predictions_umoja = ensemble_model_umoja.predict(X_test_umoja)
+            
+#             # Save the trained model to a file
+#             model_filename = "nav_umoja_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_umoja, model_file)
 
             mae_umoja = mean_absolute_error(y_test_umoja, ensemble_predictions_umoja)
             mse_umoja = mean_squared_error(y_test_umoja, ensemble_predictions_umoja)
@@ -1346,6 +1477,11 @@ if selected == "NAV Prediction":
             ensemble_model_wekeza_maisha = VotingRegressor(models_wekeza_maisha)
             ensemble_model_wekeza_maisha.fit(X_train_wekeza_maisha, y_train_wekeza_maisha)
             ensemble_predictions_wekeza_maisha = ensemble_model_wekeza_maisha.predict(X_test_wekeza_maisha)
+            
+#             # Save the trained model to a file
+#             model_filename = "nav_wekeza_maisha_model.pkl"
+#             with open(model_filename, 'wb') as model_file:
+#                 joblib.dump(ensemble_model_wekeza_maisha, model_file)
 
             mae_wekeza_maisha = mean_absolute_error(y_test_wekeza_maisha, ensemble_predictions_wekeza_maisha)
             mse_wekeza_maisha = mean_squared_error(y_test_wekeza_maisha, ensemble_predictions_wekeza_maisha)
