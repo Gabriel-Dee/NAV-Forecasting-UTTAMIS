@@ -1,0 +1,8 @@
+streamlit
+pandas
+numpy
+seaborn
+scikit-learn
+streamlit_option_menu
+streamlit_lottie
+pandas_datareader
