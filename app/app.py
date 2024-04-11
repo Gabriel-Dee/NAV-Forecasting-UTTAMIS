@@ -136,7 +136,7 @@ if selected == "Dashboard":
 
     @st.cache_data
     def load_data():
-        df = pd.read_csv('Data/net_asset_value.csv')
+        df = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/net_asset_value.csv') 
         import re
 
         # Clean and extract numbers
@@ -448,12 +448,12 @@ if selected == "Prediction":
         return f'TZS {value:,.2f}'
 
     # Load datasets
-    bond_data = pd.read_csv('Data/NAV Bond Fund.csv')
-    jikimu_data = pd.read_csv('Data/NAV Jikimu Fund.csv')
-    watoto_data = pd.read_csv('Data/NAV Watoto Fund.csv')
-    liquid_data = pd.read_csv('Data/NAV Liquid Fund.csv')
-    umoja_data = pd.read_csv('Data/NAV Umoja Fund.csv')
-    wekeza_maisha_data = pd.read_csv('Data/NAV Wekeza Maisha Fund.csv')
+    bond_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Bond Fund.csv')
+    jikimu_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Jikimu Fund.csv')
+    watoto_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Watoto Fund.csv')
+    liquid_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Liquid Fund.csv')
+    umoja_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Umoja Fund.csv')
+    wekeza_maisha_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Wekeza Maisha Fund.csv')
 
     if selected_fund == 'Bond Fund':
         st.subheader('Bond Fund Features:')
@@ -1005,12 +1005,12 @@ if selected == "NAV Prediction":
         return f'TZS {value:,.2f}'
 
     # Load datasets
-    bond_data = pd.read_csv('Data/NAV Bond Fund.csv')
-    jikimu_data = pd.read_csv('Data/NAV Jikimu Fund.csv')
-    watoto_data = pd.read_csv('Data/NAV Watoto Fund.csv')
-    liquid_data = pd.read_csv('Data/NAV Liquid Fund.csv')
-    umoja_data = pd.read_csv('Data/NAV Umoja Fund.csv')
-    wekeza_maisha_data = pd.read_csv('Data/NAV Wekeza Maisha Fund.csv')
+    bond_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Bond Fund.csv')
+    jikimu_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Jikimu Fund.csv')
+    watoto_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Watoto Fund.csv')
+    liquid_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Liquid Fund.csv')
+    umoja_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Umoja Fund.csv')
+    wekeza_maisha_data = pd.read_csv('/Users/gabe/NAV-Forecasting-UTTAMIS/Data/NAV Wekeza Maisha Fund.csv')
 
 #     # Sidebar
 #     st.sidebar.title('Fund Selection')
